@@ -1,6 +1,6 @@
 {
   "name": "@identity-connect/wallet-adapter-plugin",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Identity Connect plugin to use with Aptos Wallet Adapter",
   "author": "Identity Connect Aptos",
   "main": "./dist/index.js",

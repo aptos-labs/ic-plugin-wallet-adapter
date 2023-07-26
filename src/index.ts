@@ -52,27 +52,18 @@ export class IdentityConnectWallet implements AdapterPlugin {
   }
 
   async connect(): Promise<AccountInfo> {
-    const address = await this.client.connect();
-    if (!address) {
-      throw new Error(`${IcWalletName} Address Info Error`);
+    const account = await this.getConnectedAccount();
+    if (account !== undefined) {
+      return account;
     }
 
-    // Make sure all previously connected accounts are disconnected
-    const accounts = await this.client.getConnectedAccounts();
-    let newAccount: ICAccount | undefined;
-
-    for (const account of accounts) {
-      if (account.accountAddress === address) {
-        newAccount = account;
-      } else {
-        await this.client.disconnect(account.accountAddress);
-      }
-    }
-
+    await this.client.connect();
+    const newAccount = await this.getConnectedAccount();
     if (!newAccount) {
       throw new Error(`${IcWalletName} Address Info Error`);
     }
-    return convertAccount(newAccount);
+
+    return newAccount;
   }
 
   async account(): Promise<AccountInfo> {
