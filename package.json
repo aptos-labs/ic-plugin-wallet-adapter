@@ -1,6 +1,6 @@
 {
   "name": "@identity-connect/wallet-adapter-plugin",
-  "version": "0.0.2",
+  "version": "0.0.6",
   "description": "Identity Connect plugin to use with Aptos Wallet Adapter",
   "author": "Identity Connect Aptos",
   "main": "./dist/index.js",
@@ -19,9 +19,9 @@
   "dependencies": {
     "@aptos-labs/wallet-adapter-core": "^2.5.0",
     "aptos": "^1.14.0",
-    "@identity-connect/api": "^0.0.6",
-    "@identity-connect/crypto": "^0.0.6",
-    "@identity-connect/dapp-sdk": "^0.0.9"
+    "@identity-connect/api": "^0.0.9",
+    "@identity-connect/crypto": "^0.0.9",
+    "@identity-connect/dapp-sdk": "^0.0.11"
   },
   "devDependencies": {
     "@types/jest": "^29.2.3",
