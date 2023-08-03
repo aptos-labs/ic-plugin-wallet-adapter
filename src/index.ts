@@ -5,11 +5,11 @@ import type {
   SignMessagePayload,
   SignMessageResponse,
   WalletName,
-} from "@aptos-labs/wallet-adapter-core";
+} from '@aptos-labs/wallet-adapter-core';
 import { NetworkName } from '@aptos-labs/wallet-adapter-core';
-import type { JsonPayload } from '@identity-connect/api';
+import { type JsonPayload, NetworkName as ICNetworkName } from '@identity-connect/api';
 import { ICDappClient, ICDappClientConfig } from '@identity-connect/dapp-sdk';
-import { TxnBuilderTypes, Types } from "aptos";
+import { TxnBuilderTypes, Types } from 'aptos';
 
 type ICAccount = Awaited<ReturnType<ICDappClient['getConnectedAccounts']>>[0];
 
@@ -19,6 +19,10 @@ function convertAccount(account: ICAccount) {
     address: account.accountAddress,
     publicKey,
   };
+}
+
+function isIcNetworkName(networkName: NetworkName | ICNetworkName): networkName is ICNetworkName {
+  return Object.values(ICNetworkName).includes(networkName as any);
 }
 
 export const IcWalletName = "IdentityConnect" as WalletName<"IdentityConnect">;
@@ -40,6 +44,13 @@ export class IdentityConnectWallet implements AdapterPlugin {
   readonly client: ICDappClient;
   networkName: NetworkName;
 
+  private get icNetworkName(): ICNetworkName {
+    if (!isIcNetworkName(this.networkName)) {
+      throw new Error(`Unsupported network ${this.networkName}`);
+    }
+    return this.networkName;
+  }
+
   constructor(dappId: string, options: IdentityConnectWalletConfig = {}) {
     const { networkName = NetworkName.Mainnet, ...icDappClientOptions } = options;
     this.client = new ICDappClient(dappId, icDappClientOptions);
@@ -48,7 +59,7 @@ export class IdentityConnectWallet implements AdapterPlugin {
 
   private async getConnectedAccount() {
     const accounts = await this.client.getConnectedAccounts();
-    return convertAccount(accounts[0]);
+    return accounts[0] ? convertAccount(accounts[0]) : undefined;
   }
 
   async connect(): Promise<AccountInfo> {
@@ -83,7 +94,6 @@ export class IdentityConnectWallet implements AdapterPlugin {
 
   async signAndSubmitTransaction(
     transaction: Types.TransactionPayload,
-    options?: any,
   ): Promise<{ hash: Types.HexEncodedBytes }> {
     const account = await this.getConnectedAccount();
     if (!account) {
@@ -99,7 +109,7 @@ export class IdentityConnectWallet implements AdapterPlugin {
       const response = await this.client.signAndSubmitTransaction(
         account.address,
         jsonPayload,
-        options,
+        { networkName: this.icNetworkName },
       );
       return response as { hash: Types.HexEncodedBytes };
     } catch (error: any) {
@@ -109,7 +119,6 @@ export class IdentityConnectWallet implements AdapterPlugin {
 
   async signAndSubmitBCSTransaction(
     transaction: TxnBuilderTypes.TransactionPayload,
-    options?: any,
   ): Promise<{ hash: Types.HexEncodedBytes }> {
     const account = await this.getConnectedAccount();
     if (!account) {
@@ -120,7 +129,7 @@ export class IdentityConnectWallet implements AdapterPlugin {
       const response = await this.client.signAndSubmitTransaction(
         account.address,
         transaction,
-        options,
+        { networkName: this.icNetworkName },
       );
       return response as { hash: Types.HexEncodedBytes };
     } catch (error: any) {
@@ -138,7 +147,10 @@ export class IdentityConnectWallet implements AdapterPlugin {
       throw `${IcWalletName} Invalid signMessage Payload`;
     }
 
-    const { prefix, ...rest } = await this.client.signMessage(account.address, message);
+    const {
+      prefix,
+      ...rest
+    } = await this.client.signMessage(account.address, message, { networkName: this.icNetworkName });
     if (prefix !== 'APTOS') {
       throw `${IcWalletName} Sign Message failed`;
     }
