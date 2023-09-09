@@ -9,12 +9,17 @@ import type {
 import { NetworkName } from '@aptos-labs/wallet-adapter-core';
 import { type JsonPayload, NetworkName as ICNetworkName } from '@identity-connect/api';
 import { ICDappClient, ICDappClientConfig } from '@identity-connect/dapp-sdk';
-import { TxnBuilderTypes, Types } from 'aptos';
+import { HexString, TxnBuilderTypes, Types } from 'aptos';
 
 type ICAccount = Awaited<ReturnType<ICDappClient['getConnectedAccounts']>>[0];
 
+function decodeBase64(base64Str: string): Uint8Array {
+  return Uint8Array.from(atob(base64Str), (m) => m.codePointAt(0)!);
+}
+
 function convertAccount(account: ICAccount) {
-  const publicKey = Buffer.from(account.accountEd25519PublicKeyB64, 'base64').toString('hex');
+  const publicKeyBytes = decodeBase64(account.accountEd25519PublicKeyB64);
+  const publicKey = HexString.fromUint8Array(publicKeyBytes).toString();
   return {
     address: account.accountAddress,
     publicKey,
