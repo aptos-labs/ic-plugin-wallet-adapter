@@ -2,7 +2,7 @@ import { IdentityConnectWallet } from "../index";
 
 const mockDappId = 'dapp-id';
 
-describe("PetraWallet", () => {
+describe("IdentityConnectWallet", () => {
   const wallet = new IdentityConnectWallet(mockDappId);
 
   test("defines name", () => {
