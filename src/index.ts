@@ -47,6 +47,8 @@ export class IdentityConnectWallet implements AdapterPlugin {
   readonly client: ICDappClient;
   networkName: NetworkName;
 
+  private onDisconnectListenerCleanup?: () => void;
+
   private get icNetworkName(): ICNetworkName {
     if (!isIcNetworkName(this.networkName)) {
       throw new Error(`Unsupported network ${this.networkName}`);
@@ -172,6 +174,12 @@ export class IdentityConnectWallet implements AdapterPlugin {
 
   async onAccountChange(callback: any): Promise<void> {
     // Not applicable for IC
+    if (this.onDisconnectListenerCleanup) {
+      this.onDisconnectListenerCleanup();
+    }
+    this.onDisconnectListenerCleanup = this.client.onDisconnect(() => {
+      callback(null);
+    });
   }
 
   async network(): Promise<NetworkInfo> {
