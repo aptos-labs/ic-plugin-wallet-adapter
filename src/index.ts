@@ -7,8 +7,9 @@ import type {
   WalletName,
 } from '@aptos-labs/wallet-adapter-core';
 import { NetworkName } from '@aptos-labs/wallet-adapter-core';
-import { type JsonPayload, NetworkName as ICNetworkName } from '@identity-connect/api';
+import { NetworkName as ICNetworkName } from '@identity-connect/api';
 import { ICDappClient, ICDappClientConfig } from '@identity-connect/dapp-sdk';
+import { JsonTransactionPayload } from '@identity-connect/wallet-api';
 import { HexString, TxnBuilderTypes, Types } from 'aptos';
 
 type ICAccount = Awaited<ReturnType<ICDappClient['getConnectedAccounts']>>[0];
@@ -23,6 +24,7 @@ function convertAccount(account: ICAccount) {
   return {
     address: account.accountAddress,
     publicKey,
+    dappWalletId: account.dappWalletId,
   };
 }
 
@@ -108,12 +110,13 @@ export class IdentityConnectWallet implements AdapterPlugin {
     if (!['entry_function_payload', 'multisig_payload', undefined].includes(transaction.type)) {
       throw `${IcWalletName} Transaction type not supported`;
     }
-    const jsonPayload = transaction as JsonPayload;
 
     try {
       const response = await this.client.signAndSubmitTransaction(
         account.address,
-        jsonPayload,
+        {
+          payload: transaction as JsonTransactionPayload
+        },
         { networkName: this.icNetworkName },
       );
       return response as { hash: Types.HexEncodedBytes };
@@ -133,7 +136,9 @@ export class IdentityConnectWallet implements AdapterPlugin {
     try {
       const response = await this.client.signAndSubmitTransaction(
         account.address,
-        transaction,
+        {
+          payload: transaction
+        },
         { networkName: this.icNetworkName },
       );
       return response as { hash: Types.HexEncodedBytes };
@@ -166,6 +171,24 @@ export class IdentityConnectWallet implements AdapterPlugin {
     transaction: Types.TransactionPayload | TxnBuilderTypes.TransactionPayload,
   ): Promise<{ hash: Types.HexEncodedBytes }> {
     throw new Error('Method not supported');
+  }
+
+  async isDappWallet() {
+    const account = await this.getConnectedAccount();
+    return account?.dappWalletId;
+  }
+
+  async offboardDappWallet(): Promise<boolean> {
+    const account = await this.getConnectedAccount();
+    if (account === undefined) {
+      return false;
+    }
+
+    if (account.dappWalletId === undefined) {
+      throw "Can not export non-dapp wallet."
+    }
+    
+    return this.client.offboard(account.address);
   }
 
   async onNetworkChange(callback: any): Promise<void> {
