@@ -14,7 +14,8 @@ import {
   SignTransactionRequestArgs,
   SignTransactionResponseArgs, TransactionOptions,
 } from '@identity-connect/wallet-api';
-import { HexString, TxnBuilderTypes, Types } from 'aptos';
+import { BCS, HexString, TxnBuilderTypes, Types } from 'aptos';
+import { txnAuthenticatorFromAccountAuthenticator } from './normalization';
 
 type ICAccount = Awaited<ReturnType<ICDappClient['getConnectedAccounts']>>[0];
 
@@ -174,14 +175,28 @@ export class IdentityConnectWallet implements AdapterPlugin {
   async signTransaction(
     payloadOrArgs: TxnBuilderTypes.TransactionPayload | SignTransactionRequestArgs,
     options?: TransactionOptions,
-  ): Promise<SignTransactionResponseArgs> {
+  ) {
     const account = await this.getConnectedAccount();
     if (!account) {
       throw `${IcWalletName} Account not paired`;
     }
     const isNewApi = 'payload' in payloadOrArgs || 'rawTxn' in payloadOrArgs;
-    const args = isNewApi ? payloadOrArgs : { payload: payloadOrArgs, options };
-    return this.client.signTransaction(account.address, args, { networkName: this.icNetworkName });
+
+    if (isNewApi) {
+      return this.client.signTransaction(account.address, payloadOrArgs, { networkName: this.icNetworkName });
+    }
+
+    const { accountAuthenticator, rawTxn } = await this.client.signTransaction(account.address, {
+      payload: payloadOrArgs,
+      options,
+    }, { networkName: this.icNetworkName });
+    const txnAuthenticator =
+      txnAuthenticatorFromAccountAuthenticator(accountAuthenticator);
+    const signedTxn = new TxnBuilderTypes.SignedTransaction(
+      rawTxn,
+      txnAuthenticator,
+    );
+    return BCS.bcsToBytes(signedTxn);
   }
 
   async isDappWallet() {
