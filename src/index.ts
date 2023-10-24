@@ -9,7 +9,11 @@ import type {
 import { NetworkName } from '@aptos-labs/wallet-adapter-core';
 import { NetworkName as ICNetworkName } from '@identity-connect/api';
 import { ICDappClient, ICDappClientConfig } from '@identity-connect/dapp-sdk';
-import { JsonTransactionPayload } from '@identity-connect/wallet-api';
+import {
+  JsonTransactionPayload,
+  SignTransactionRequestArgs,
+  SignTransactionResponseArgs, TransactionOptions,
+} from '@identity-connect/wallet-api';
 import { HexString, TxnBuilderTypes, Types } from 'aptos';
 
 type ICAccount = Awaited<ReturnType<ICDappClient['getConnectedAccounts']>>[0];
@@ -115,7 +119,7 @@ export class IdentityConnectWallet implements AdapterPlugin {
       const response = await this.client.signAndSubmitTransaction(
         account.address,
         {
-          payload: transaction as JsonTransactionPayload
+          payload: transaction as JsonTransactionPayload,
         },
         { networkName: this.icNetworkName },
       );
@@ -137,7 +141,7 @@ export class IdentityConnectWallet implements AdapterPlugin {
       const response = await this.client.signAndSubmitTransaction(
         account.address,
         {
-          payload: transaction
+          payload: transaction,
         },
         { networkName: this.icNetworkName },
       );
@@ -168,9 +172,16 @@ export class IdentityConnectWallet implements AdapterPlugin {
   }
 
   async signTransaction(
-    transaction: Types.TransactionPayload | TxnBuilderTypes.TransactionPayload,
-  ): Promise<{ hash: Types.HexEncodedBytes }> {
-    throw new Error('Method not supported');
+    payloadOrArgs: TxnBuilderTypes.TransactionPayload | SignTransactionRequestArgs,
+    options?: TransactionOptions,
+  ): Promise<SignTransactionResponseArgs> {
+    const account = await this.getConnectedAccount();
+    if (!account) {
+      throw `${IcWalletName} Account not paired`;
+    }
+    const isNewApi = 'payload' in payloadOrArgs || 'rawTxn' in payloadOrArgs;
+    const args = isNewApi ? payloadOrArgs : { payload: payloadOrArgs, options };
+    return this.client.signTransaction(account.address, args, { networkName: this.icNetworkName });
   }
 
   async isDappWallet() {
@@ -187,7 +198,7 @@ export class IdentityConnectWallet implements AdapterPlugin {
     if (account.dappWalletId === undefined) {
       throw "Can not export non-dapp wallet."
     }
-    
+
     return this.client.offboard(account.address);
   }
 
