@@ -18,10 +18,10 @@ import { BCS, HexString, TxnBuilderTypes, Types } from 'aptos';
 import { txnAuthenticatorFromAccountAuthenticator } from './normalization';
 
 type ICAccount = Awaited<ReturnType<ICDappClient['getConnectedAccounts']>>[0];
-const ChainIds: Record<NetworkName, string> = {
-  mainnet: "0",
-  testnet: "1",
-  devnet: "", // Not supported
+const ChainIds: Record<NetworkName, string | undefined> = {
+  mainnet: "1",
+  testnet: "2",
+  devnet: undefined,
 };
 
 function decodeBase64(base64Str: string): Uint8Array {
@@ -78,7 +78,7 @@ export class IdentityConnectWallet implements AdapterPlugin {
     } = options;
     this.client = new ICDappClient(dappId, icDappClientOptions);
     this.networkName = networkName;
-    this.chainId = chainId ?? ChainIds[networkName];
+    this.chainId = chainId ?? ChainIds[networkName] ?? "";
   }
 
   private async getConnectedAccount() {
